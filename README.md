@@ -121,11 +121,15 @@ Model Matchmaker runs entirely locally. No network calls, no proxy, no attack su
 
 ## Results
 
-After a week of daily use building two products ([DoMoreWorld](https://domoreworld.com) and [Art Ping Pong](https://artpingpong.com)):
+I ran a retroactive analysis on several weeks of prompts from building two products ([DoMoreWorld](https://domoreworld.com) and [Art Ping Pong](https://artpingpong.com)). I was using Opus for almost everything.
 
-- ~40-50% of prompts get downgraded to Haiku or Sonnet with no quality loss
-- Complex architecture prompts get upgraded when I forget I'm still on Sonnet
-- The log file reveals usage patterns I didn't expect (most "build" prompts don't need Opus)
+- **60-70% of prompts** were standard implementation work (building pages, writing components, debugging) that Sonnet handles identically at ~75% less cost
+- **Git commits, file renames, route additions, menu reordering** were all on Opus when Haiku handles them at ~90% less cost
+- **Architecture decisions and deep analysis** correctly stayed on Opus
+- **12/12 test prompts** from real sessions classified correctly after tuning
+- **Estimated savings: 50-70%** of total AI spend with zero quality loss
+
+The log file has been the most interesting part. Reviewing it reveals patterns you don't expect; most "build" prompts genuinely don't need Opus.
 
 ## Contributing
 
