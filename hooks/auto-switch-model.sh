@@ -70,21 +70,53 @@ fi
 
 echo "$CURRENT_TIME" > "$CIRCUIT_FILE"
 
-# Audit log
-echo "[$(date -Iseconds)] SWITCH_ATTEMPT | Model: $MODEL | PID: $$ | User: $(whoami)" >> "$LOG_FILE"
+# Detect current Cursor mode (affects dropdown positions)
+MODE_FILE="$HOME/.cursor/hooks/.cursor-mode"
+CURSOR_MODE="agent"  # default
+if [ -f "$MODE_FILE" ]; then
+    CURSOR_MODE=$(cat "$MODE_FILE" 2>/dev/null || echo "agent")
+fi
 
-# Model dropdown positions (from top: Auto=0, MAX=1, Composer=2, GPT=3, Opus=4, Haiku=5, Sonnet=6)
-case "$MODEL" in
-    opus)
-        ARROW_PRESSES=4
-        ;;
-    haiku)
-        ARROW_PRESSES=5
-        ;;
-    sonnet)
-        ARROW_PRESSES=6
-        ;;
-esac
+# Audit log
+echo "[$(date -Iseconds)] SWITCH_ATTEMPT | Model: $MODEL | Mode: $CURSOR_MODE | PID: $$ | User: $(whoami)" >> "$LOG_FILE"
+
+# Model dropdown positions
+# Agent/Debug/Ask modes: Auto=0, MAX=1, Composer=2, GPT=3, Opus=4, Haiku=5, Sonnet=6
+# Plan mode: Auto=0, MAX=1, Composer=2, GPT=3, Opus=4, [Haiku grayed/skipped], Sonnet=5
+#
+# In Plan mode, Haiku is grayed out and arrow-down skips it, so all models after it
+# shift up by one position.
+
+if [ "$CURSOR_MODE" = "plan" ]; then
+    # Plan mode: Haiku is grayed out and gets auto-skipped
+    case "$MODEL" in
+        opus)
+            ARROW_PRESSES=4
+            ;;
+        haiku)
+            # Haiku not available in Plan mode, use Sonnet instead
+            echo "[$(date -Iseconds)] INFO | Haiku not available in Plan mode, switching to Sonnet" >> "$LOG_FILE"
+            MODEL="sonnet"
+            ARROW_PRESSES=5
+            ;;
+        sonnet)
+            ARROW_PRESSES=5
+            ;;
+    esac
+else
+    # Agent/Debug/Ask modes: full model list
+    case "$MODEL" in
+        opus)
+            ARROW_PRESSES=4
+            ;;
+        haiku)
+            ARROW_PRESSES=5
+            ;;
+        sonnet)
+            ARROW_PRESSES=6
+            ;;
+    esac
+fi
 
 # Proxy via Terminal.app to get Accessibility permissions
 # Cursor's subprocess doesn't inherit macOS Accessibility/Automation permissions,

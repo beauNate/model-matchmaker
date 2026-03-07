@@ -28,6 +28,16 @@ When Model Matchmaker blocks a prompt, it now **automatically switches the model
 
 Disable anytime with `off`. Uses macOS Accessibility permissions + Terminal.app proxy for safe, reliable switching.
 
+**Mode Support:**  
+Auto-switch adapts to Cursor's different modes (Agent, Plan, Debug, Ask). In Plan mode, Haiku is unavailable, so Model Matchmaker automatically switches to Sonnet instead. To log your current mode:
+
+```bash
+~/.cursor/hooks/log-cursor-mode.sh plan   # When entering Plan mode
+~/.cursor/hooks/log-cursor-mode.sh agent  # When back in Agent mode
+```
+
+This ensures correct dropdown navigation for each mode.
+
 ## How It Works
 
 ```mermaid
@@ -215,6 +225,20 @@ Prefix any prompt with `!` to bypass the advisor entirely:
 The override is logged (so you can track accuracy) but the prompt goes through immediately with no blocking.
 
 ## Troubleshooting
+
+### Auto-Switch Selects Wrong Model (Plan/Agent Mode)
+
+**Symptom:** Auto-switch tries to select Haiku in Plan mode, or lands on the wrong model position.
+
+**Cause:** Cursor's model dropdown changes based on mode — in Plan mode, Haiku is grayed out and gets skipped when arrow-keying, shifting all positions after it.
+
+**Fix:** Log your current mode:
+```bash
+~/.cursor/hooks/log-cursor-mode.sh plan   # Entering Plan mode
+~/.cursor/hooks/log-cursor-mode.sh agent  # Back to Agent mode
+```
+
+Auto-switch reads `~/.cursor/hooks/.cursor-mode` and adjusts dropdown positions accordingly. In Plan mode, Haiku requests automatically redirect to Sonnet.
 
 ### Hook Blocks Every Prompt (Exit Code 2 Error)
 
