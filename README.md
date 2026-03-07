@@ -14,6 +14,20 @@ Before each prompt is sent, Model Matchmaker reads what you're asking and which 
 
 Override anytime by prefixing your prompt with `!`.
 
+### Auto-Switch (Optional)
+
+Enable automatic model switching (v2+):
+```bash
+~/.cursor/hooks/toggle-auto-switch.sh on
+```
+
+When Model Matchmaker blocks a prompt, it now **automatically switches the model** for you via keyboard automation. Terminal flashes briefly, model changes, you press Enter to re-send. Check status:
+```bash
+~/.cursor/hooks/toggle-auto-switch.sh status
+```
+
+Disable anytime with `off`. Uses macOS Accessibility permissions + Terminal.app proxy for safe, reliable switching.
+
 ## How It Works
 
 ```mermaid
@@ -54,6 +68,26 @@ chmod +x ~/.cursor/hooks/*.sh
 ```
 
 That's it. No packages, no build step, no config files to edit.
+
+### Enable Auto-Switch (Optional)
+
+Model Matchmaker v2+ can automatically switch models when it blocks a prompt:
+
+```bash
+# Grant Accessibility permissions first
+# System Settings > Privacy & Security > Accessibility > Add Terminal
+
+# Then enable auto-switch
+~/.cursor/hooks/toggle-auto-switch.sh on
+
+# Check status
+~/.cursor/hooks/toggle-auto-switch.sh status
+
+# Disable anytime
+~/.cursor/hooks/toggle-auto-switch.sh off
+```
+
+When enabled, the model switches automatically (~1 second) instead of showing a block message. You press Enter to re-send with the new model.
 
 ## What Gets Routed Where
 
