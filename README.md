@@ -435,6 +435,13 @@ echo '{"prompt":"test message","model":"claude-4-opus"}' | bash ~/.cursor/hooks/
 
 See [GitHub Issues](https://github.com/coyvalyss1/model-matchmaker/issues) for details and discussion.
 
+## About
+
+Built by Coy Byron ([Valyss LLC](https://business.valyss.com)).
+
+Part of a collection of open-source AI development tools. Check out:
+- [Multi-Product Context System](https://github.com/coyvalyss1/multi-product-context) - Stop explaining your codebase to AI every session
+
 ## License
 
 MIT
