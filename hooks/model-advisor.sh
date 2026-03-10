@@ -58,30 +58,80 @@ is_multi_paragraph = word_count > 200
 if has_opus_signal or is_long_analytical or is_multi_paragraph:
     recommendation = "opus"
 else:
-    haiku_patterns = [
-        r"\bgit\s+(commit|push|pull|status|log|diff|add|stash|branch|merge|rebase|checkout)\b",
-        r"\bcommit\b.*\b(change|push|all)\b", r"\bpush\s+(to|the|remote|origin)\b",
-        r"\brename\b", r"\bre-?order\b", r"\bmove\s+file\b", r"\bdelete\s+file\b",
-        r"\badd\s+(import|route|link)\b", r"\bformat\b", r"\blint\b",
-        r"\bprettier\b", r"\beslint\b", r"\bremove\s+(unused|dead)\b",
-        r"\bupdate\s+(version|package)\b"
+    # Short prompt patterns (2-10 words) - high confidence despite brevity
+    short_haiku_prompts = [
+        r"^git\s+status\s*$",
+        r"^git\s+commit\s*$",
+        r"^git\s+push\s*$",
+        r"^git\s+diff\s*$",
+        r"^git\s+log\s*$",
+        r"^commit\s+(this|all|changes)\s*$",
+        r"^push\s+to\s+\w+\s*$",
+        r"^rename\s+\w+(\s+to\s+\w+)?\s*$",
+        r"^delete\s+\w+\s*$",
+        r"^format\s+(this|code|file)\s*$",
+        r"^lint\s+(this|code|file)?\s*$",
     ]
-    is_haiku_task = word_count < 60 and any(re.search(p, prompt_lower) for p in haiku_patterns)
-
-    sonnet_patterns = [
-        r"\bbuild\b", r"\bimplement\b", r"\bcreate\b", r"\bfix\b", r"\bdebug\b",
-        r"\badd\s+feature\b", r"\bwrite\b", r"\bcomponent\b", r"\bservice\b",
-        r"\bpage\b", r"\bdeploy\b", r"\btest\b", r"\bupdate\b", r"\brefactor\b",
-        r"\bstyle\b", r"\bcss\b", r"\broute\b", r"\bapi\b", r"\bfunction\b"
+    
+    short_sonnet_prompts = [
+        r"^fix\s+(this|the)\s+\w+\s*$",
+        r"^(build|create|add)\s+(a\s+)?\w+\s*$",
+        r"^update\s+\w+\s*$",
+        r"^test\s+\w+\s*$",
+        r"^debug\s+\w+\s*$",
+        r"^implement\s+\w+\s*$",
+        r"^write\s+(a\s+)?\w+\s*$",
     ]
-    is_sonnet_task = any(re.search(p, prompt_lower) for p in sonnet_patterns)
+    
+    short_opus_prompts = [
+        r"^analyze\s+\w+\s*$",
+        r"^evaluate\s+\w+\s*$",
+        r"^compare\s+\w+\s+(and|vs)\s+\w+\s*$",
+        r"^why\s+(does|is|are)\s+",
+        r"^should\s+(i|we)\s+",
+    ]
+    
+    # Check short prompt patterns first (takes precedence)
+    recommendation = None
+    if word_count <= 10:
+        if any(re.search(p, prompt_lower) for p in short_haiku_prompts):
+            recommendation = "haiku"
+        elif any(re.search(p, prompt_lower) for p in short_opus_prompts):
+            recommendation = "opus"
+        elif any(re.search(p, prompt_lower) for p in short_sonnet_prompts):
+            recommendation = "sonnet"
+    
+    # If no short pattern matched, use existing longer-form patterns
+    if recommendation is None:
+        haiku_patterns = [
+            r"\bgit\s+(commit|push|pull|status|log|diff|add|stash|branch|merge|rebase|checkout)\b",
+            r"\bcommit\b.*\b(change|push|all)\b", r"\bpush\s+(to|the|remote|origin)\b",
+            r"\brename\b", r"\bre-?order\b", r"\bmove\s+file\b", r"\bdelete\s+file\b",
+            r"\badd\s+(import|route|link)\b", r"\bformat\b", r"\blint\b",
+            r"\bprettier\b", r"\beslint\b", r"\bremove\s+(unused|dead)\b",
+            r"\bupdate\s+(version|package)\b"
+        ]
+        # Tightened threshold: 40 words (was 60) + exclude debugging-related prompts
+        is_haiku_task = (
+            word_count < 40 and 
+            any(re.search(p, prompt_lower) for p in haiku_patterns) and
+            not any(kw in prompt_lower for kw in ["bug", "issue", "error", "broken", "fails", "failing"])
+        )
 
-    if is_haiku_task:
-        recommendation = "haiku"
-    elif is_sonnet_task:
-        recommendation = "sonnet"
-    else:
-        recommendation = None
+        sonnet_patterns = [
+            r"\bbuild\b", r"\bimplement\b", r"\bcreate\b", r"\bfix\b", r"\bdebug\b",
+            r"\badd\s+feature\b", r"\bwrite\b", r"\bcomponent\b", r"\bservice\b",
+            r"\bpage\b", r"\bdeploy\b", r"\btest\b", r"\bupdate\b", r"\brefactor\b",
+            r"\bstyle\b", r"\bcss\b", r"\broute\b", r"\bapi\b", r"\bfunction\b"
+        ]
+        is_sonnet_task = any(re.search(p, prompt_lower) for p in sonnet_patterns)
+
+        if is_haiku_task:
+            recommendation = "haiku"
+        elif is_sonnet_task:
+            recommendation = "sonnet"
+        else:
+            recommendation = None
 
 block = False
 message = ""
@@ -108,6 +158,11 @@ try:
     os.makedirs(log_dir, exist_ok=True)
     log_path = os.path.join(log_dir, "model-matchmaker.ndjson")
     snippet = clean_prompt[:40].replace(chr(10), " ").replace(chr(34), chr(39))
+    
+    # Check if auto-switch is enabled and would be triggered for this block
+    auto_switch_enabled = os.path.exists(os.path.join(log_dir, ".auto-switch-enabled"))
+    auto_switch_attempted = auto_switch_enabled and block
+    
     entry = {
         "event": "recommendation",
         "ts": datetime.now().isoformat(),
@@ -118,6 +173,7 @@ try:
         "action": action,
         "word_count": word_count,
         "prompt_snippet": snippet,
+        "auto_switch_attempted": auto_switch_attempted,
     }
     with open(log_path, "a") as f:
         f.write(json.dumps(entry) + "\n")
