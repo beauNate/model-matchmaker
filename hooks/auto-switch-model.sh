@@ -42,19 +42,24 @@ case "$MODEL" in
         ;;
 esac
 
-# SECURITY: Execution lock - prevent simultaneous executions
-if [ -f "$LOCK_FILE" ]; then
-    LOCK_AGE=$(( $(date +%s) - $(stat -f %m "$LOCK_FILE" 2>/dev/null || echo 0) ))
-    if [ $LOCK_AGE -lt 10 ]; then
+# SECURITY: Atomic execution lock - prevent simultaneous executions
+# mkdir is atomic on Unix, unlike touch + file-exists check
+LOCK_DIR="$HOME/.cursor/hooks/.auto-switch-lock.d"
+if mkdir "$LOCK_DIR" 2>/dev/null; then
+    # Got the lock
+    trap "rm -rf $LOCK_DIR" EXIT
+else
+    # Lock exists - check age and bail
+    LOCK_AGE=$(( $(date +%s) - $(stat -f %m "$LOCK_DIR" 2>/dev/null || echo 0) ))
+    if [ $LOCK_AGE -gt 10 ]; then
+        rm -rf "$LOCK_DIR"
+        mkdir "$LOCK_DIR" 2>/dev/null || { echo "[$(date -Iseconds)] SECURITY: Lock contention" >> "$LOG_FILE"; exit 0; }
+        trap "rm -rf $LOCK_DIR" EXIT
+    else
         echo "[$(date -Iseconds)] SECURITY: Lock exists, switch in progress" >> "$LOG_FILE"
         exit 0
-    else
-        rm -f "$LOCK_FILE"
     fi
 fi
-
-touch "$LOCK_FILE"
-trap "rm -f $LOCK_FILE" EXIT
 
 # SECURITY: Rate limiting - prevent rapid-fire switching
 CURRENT_TIME=$(date +%s)
@@ -169,7 +174,9 @@ on run argv
             
             delay 0.8
             
-            -- Enter to select the filtered result
+            -- Enter to select the filtered result, then 1 more Enter to confirm
+            key code 36
+            delay 0.3
             key code 36
         end tell
     end tell

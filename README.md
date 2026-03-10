@@ -21,7 +21,14 @@ Enable automatic model switching (v2+):
 ~/.cursor/hooks/toggle-auto-switch.sh on
 ```
 
-When Model Matchmaker blocks a prompt, it now **automatically switches the model** for you via keyboard automation. Terminal flashes briefly, model changes, you press Enter to re-send. Check status:
+When Model Matchmaker blocks a prompt, it now **automatically switches the model** for you via keyboard automation:
+1. Opens the model dropdown (Cmd+/)
+2. Types the model name to search
+3. Presses Enter twice (select + confirm)
+4. Terminal window flashes briefly, then closes
+5. Your prompt is ready to send with the new model
+
+Check status:
 ```bash
 ~/.cursor/hooks/toggle-auto-switch.sh status
 ```
